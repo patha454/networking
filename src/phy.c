@@ -8,7 +8,7 @@
  *
  * \author H Paterson <harley.paterson@postgrad.otago.ac.nz>
  * \copyright BSL-1.0
- * \date February 2021.
+ * \date February 2021
  */
 
 #include <assert.h>
