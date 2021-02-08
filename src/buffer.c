@@ -1,8 +1,11 @@
 /**
  * \file src/buffer.c
  *
- * `buffer.c` implements a circular buffer for generic data types.
+ * `buffer.c` implements a  buffer for generic data types.
  *
+ * \see `include/networking/buffer.h` for detailed API documentation and
+ * documentation comments.
+ * 
  * \author H Paterson <harley.paterson@postgrad.otago.ac.nz>
  * \copyright BSL-1.0
  * \date February 2020
@@ -13,6 +16,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "networking/buffer.h"
 
 /**
  * Internal state for a circular buffer.
@@ -32,18 +36,10 @@ struct CircularBuffer
     size_t writeIndex;
 };
 
-/** Opaque handle to a circular buffer. */
-typedef struct CircularBuffer* CircularBuffer;
-
-/**
- * Allocate and initialise a circular buffer.
- *
- * \param length Length, in bytes, to allocate for the buffer.
- * \return A handle to the new buffer, or `NULL` on failure.
- */
-CircularBuffer circularBufferAlloc(const size_t length)
+/** Allocate and initialise a buffer. */
+Buffer bufferAlloc(const size_t length)
 {
-    CircularBuffer buffer;
+    Buffer buffer;
     assert(length > 0);
     buffer = malloc(sizeof (struct CircularBuffer));
     if (buffer == NULL) {
@@ -54,18 +50,14 @@ CircularBuffer circularBufferAlloc(const size_t length)
     buffer->writeIndex = 0;
     buffer->data = malloc(length);
     if (buffer->data == NULL) {
-        circularBufferFree(buffer);
+        bufferFree(buffer);
         return NULL;
     }
     return buffer;
 }
 
-/**
- * Deallocate and free a circular buffer.
- *
- * \param buffer Circular buffer to deallocate.
- */
-void circularBufferFree(CircularBuffer buffer)
+/** Deallocate and free a buffer. */
+void bufferFree(Buffer buffer)
 {
     if (buffer == NULL) {
         return;
@@ -81,18 +73,46 @@ void circularBufferFree(CircularBuffer buffer)
     return;
 }
 
-/**
- * Tests if a circular buffer is empty.
- *
- * A circular buffer is empty if it has no more data ready to read.
- *
- * \param buffer The buffer to query.
- * \return `true` if the buffer is empty; `false` otherwise.
- */
-bool circularBufferIsEmpty(CircularBuffer buffer)
+/** Tests if a buffer is empty. */
+bool bufferIsEmpty(Buffer buffer)
 {
     if (buffer->readIndex == buffer->writeIndex) {
         return true;
     }
     return false;
+}
+
+/** Find how many items (not bytes) are in a buffer, ready to be consumed. */
+size_t bufferItems(Buffer buffer, size_t itemSize)
+{
+    size_t bytesReady = 0;
+    assert(buffer != NULL);
+    assert(itemSize > 0);
+    if (bufferIsEmpty(buffer)) {
+        return 0;
+    }
+    if (buffer->writeIndex > buffer->readIndex) {
+        bytesReady = buffer->writeIndex - buffer->readIndex;
+    }
+    else {
+        bytesReady = buffer->length - (buffer->readIndex - buffer->writeIndex);
+    }
+    return bytesReady / itemSize;
+}
+
+/**
+ * Read entries from the buffer.
+ *
+ * \param buffer The buffer to read from.
+ * \param n The number of entries to read.
+ * \param output Allocated memory to store the output in.
+ * \return The number of items read from the buffer.
+ */
+size_t bufferRead(Buffer buffer, size_t n, void* output)
+{
+    assert(buffer != NULL);
+    assert(n > 0);
+    assert(output != NULL);
+    size_t itemsRead = bufferItems(buffer);
+
 }
