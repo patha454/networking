@@ -9,6 +9,7 @@
  */
 
 #include <assert.h>
+#include <errno.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <stdbool.h>
@@ -94,7 +95,7 @@ int phyConnect(Phy phy)
         exit(EXIT_FAILURE);
     }
     int endpoints[2] = { 0 };
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, endpoints) == -1) {
+    if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0, endpoints) == -1) {
         perror("Create PHY socketpair");
         exit(EXIT_FAILURE);
     }
@@ -153,6 +154,10 @@ void phyPropagateFromSocket(Phy phy, int socketFd)
             break;
         }
         if (sizeRead == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                /* No more data to read for now. */
+                break;
+            }
             perror("Read from PHY socket");
             exit(EXIT_FAILURE);
         }
@@ -219,6 +224,7 @@ void phyFree(Phy phy)
 
 int main(void)
 {
+    char str[15];
     Phy phy = phyAlloc();
     assert(phy != NULL);
     phyConfigure(phy);
@@ -229,6 +235,8 @@ int main(void)
     write(fd1, "Hello, network", 15);
     printf("Write to fd %d\n", fd1);
     phyPropagate(phy);
+    read(fd2, str, 15);
+    printf("%s\n", str);
     phyFree(phy);
     return EXIT_SUCCESS;
 }
